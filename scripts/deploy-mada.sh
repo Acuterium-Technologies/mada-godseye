@@ -48,3 +48,15 @@ nginx -t && systemctl restart nginx
 
 echo "=== MADA GOD'S EYE DEPLOYED ==="
 pm2 list
+
+# === NEW SERVICES ===
+pip3 install feedparser camel-tools
+
+# Start new data feeds
+pm2 start scripts/data-sources/social-media-arabic.py --name qareen-socmint --interpreter python3
+pm2 start scripts/data-sources/weather-overlay.py --name mada-weather --interpreter python3
+pm2 start scripts/data-sources/news-feeds.py --name mada-news --interpreter python3
+
+pm2 save
+echo "=== ALL MADA SERVICES DEPLOYED ==="
+pm2 list
