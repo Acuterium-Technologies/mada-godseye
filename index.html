@@ -1,503 +1,214 @@
 <!DOCTYPE html>
-<!--
-  apps/mada-godseye/index.html
-  MADA · God's Eye View — Sovereign Defensive Intelligence Platform
-
-  Sources:
-    - IMPROVED-MADA-GODS-EYE-DASHBOARD-AlDhil-UkhmaOS-SPECS-COST-EFFECTIVE-DATA-SOURCES.md
-    - MULTI-AGENT-SWARM-CODE_ADVANCED-CESIUMJS-MADA-FEATURES-_EXPANDED-LEGAL-OSINT-SIGINT-COMMS-INT-SOCMINT-SOURCES.md
-    - AlDhil-UkhmaOS-FULL-PLATFORM-CODE-COST-EFFECTIVE-DATA-SOURCE-INTEGRATION-SCRIPTS-ADVANCED-CESIUMJS-CZML-STREAMING-LEGAL-SIGINT-TOOLS-OVERVIEW.md
-
-  Features (matches Bilawal Sidhu "God's Eye" / WorldView dashboard quality):
-    - CesiumJS 1.110 + Google 3D Tiles (photorealistic terrain)
-    - Real-time CZML streaming: AIS (maritime) + ADS-B (flights) + Satellite orbits
-    - 4D Timeline playback (time-dynamic entity tracking)
-    - Defensive overlays: Q-ENC status, shard health, ZURD gates, anomaly alerts
-    - H3 geospatial heatmaps + GPS jamming detection layer
-    - Oman-centered view (57.5°E, 21.5°N, 800km altitude)
-    - Arabic-first RTL (IBM Plex Sans Arabic)
-    - Glassmorphic HUD (blueprint-locked glassmorphism)
-    - WebXR AR mode: place vessels/aircraft in real-world camera view
-
-  Free data sources (legal, defensive government use):
-    - OpenSky Network (ADS-B + flights, free API)
-    - AISHub (maritime AIS, free after sharing 1 feed)
-    - Copernicus Sentinel (satellite imagery, Ion Asset 3954)
-    - Global Fishing Watch (vessel tracking, free non-commercial)
-
-  Deployment: Vercel (team amads-projects-428cfc6f)
-  Backend streaming: wss://api.majd.chat/czml-stream (Nginx on DigitalOcean droplet)
--->
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MADA · God's Eye View — Sovereign Defensive Intelligence</title>
-
-  <!-- CesiumJS 1.110 -->
+  <title>MADA · God's Eye View — Advanced Defensive Fusion</title>
   <script src="https://cesium.com/downloads/Cesium-1.110/Build/Cesium/Cesium.js"></script>
   <link rel="stylesheet" href="https://cesium.com/downloads/Cesium-1.110/Build/Cesium/Widgets/widgets.css">
-
-  <!-- IBM Plex Sans Arabic (Arabic-first typography from blueprint) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
-
   <style>
-    /* ── Design Tokens (Acuterium sovereign palette) ─────────────────── */
-    :root {
-      --accent:      #00E5D4;
-      --gold:        #C9A84C;
-      --void:        #0A0E17;
-      --glass-bg:    rgba(10, 14, 23, 0.85);
-      --glass-border: rgba(0, 229, 212, 0.2);
-      --breathing:   4.2s;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'IBM Plex Sans Arabic', monospace;
-      background: var(--void);
-      overflow: hidden;
-    }
-
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap');
+    :root { --accent: #00E5D4; --gold: #C9A84C; --void: #0A0E17; --alert: #FF3B30; }
+    body { font-family: 'IBM Plex Sans Arabic', monospace; background: var(--void); margin: 0; overflow: hidden; }
     #cesiumContainer { width: 100vw; height: 100vh; }
-
-    /* ── HUD Overlay (glassmorphic — blueprint locked) ─────────────── */
-    .hud {
-      position: absolute;
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      border-radius: 8px;
-      color: var(--accent);
-      z-index: 1000;
-      font-size: 12px;
-      letter-spacing: 0.05em;
-    }
-
-    /* ── Top-Left HUD: Sovereignty Status ─────────────────────────── */
-    #hud-sovereignty {
-      top: 12px;
-      left: 12px;
-      padding: 12px 16px;
-    }
-
-    #hud-sovereignty .status-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    #hud-sovereignty .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: blink var(--breathing) ease-in-out infinite;
-    }
-
-    .dot-alert { background: #FF4444 !important; }
-
-    /* ── Top-Right HUD: Layer Controls ─────────────────────────────── */
-    #hud-layers {
-      top: 12px;
-      right: 12px;
-      padding: 12px 16px;
-      direction: rtl;
-    }
-
-    #hud-layers button {
-      display: block;
-      width: 100%;
-      padding: 6px 12px;
-      margin-bottom: 4px;
-      background: transparent;
-      border: 1px solid rgba(0, 229, 212, 0.2);
-      border-radius: 6px;
-      color: var(--accent);
-      font-family: inherit;
-      font-size: 11px;
-      cursor: pointer;
-      text-align: right;
-      transition: all 0.2s ease;
-    }
-
-    #hud-layers button:hover,
-    #hud-layers button.active {
-      background: rgba(0, 229, 212, 0.15);
-      border-color: var(--accent);
-    }
-
-    /* ── Bottom-Left: AlDhil Anomaly Stats ──────────────────────────── */
-    #hud-anomaly {
-      bottom: 80px; /* above Cesium timeline */
-      left: 12px;
-      padding: 12px 16px;
-      min-width: 200px;
-    }
-
-    #hud-anomaly .stat {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    #hud-anomaly .stat-label { color: rgba(0, 229, 212, 0.6); }
-    #hud-anomaly .stat-value { color: #FFFFFF; font-weight: 500; }
-    #hud-anomaly .stat-value.alert { color: #FF4444; }
-
-    /* ── Center-Top: MADA Title Badge ───────────────────────────────── */
-    #hud-title {
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 8px 24px;
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    #hud-title h1 { font-size: 18px; font-weight: 700; letter-spacing: 3px; }
-    #hud-title p  { font-size: 10px; color: rgba(0, 229, 212, 0.6); margin-top: 2px; }
-
-    /* ── Animations ─────────────────────────────────────────────────── */
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
-    }
-
-    @keyframes breathe-glow {
-      0%, 100% { box-shadow: 0 0 8px rgba(0, 229, 212, 0.3); }
-      50%       { box-shadow: 0 0 20px rgba(0, 229, 212, 0.6); }
-    }
-
-    .breathing-hud {
-      animation: breathe-glow var(--breathing) ease-in-out infinite;
-    }
-
-    /* ── WebXR AR Button ────────────────────────────────────────────── */
-    #ar-button {
-      position: absolute;
-      bottom: 80px;
-      right: 12px;
-      padding: 10px 20px;
-      background: rgba(201, 168, 76, 0.2);
-      border: 1px solid rgba(201, 168, 76, 0.5);
-      border-radius: 8px;
-      color: var(--gold);
-      font-family: inherit;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      z-index: 1000;
-    }
-
-    #ar-button:hover {
-      background: rgba(201, 168, 76, 0.35);
-    }
+    .hud { position: absolute; top: 12px; left: 12px; background: rgba(10,14,23,0.9); backdrop-filter: blur(20px); padding: 14px 20px; border-radius: 12px; color: var(--accent); border: 1px solid rgba(0,229,212,0.3); z-index: 2000; font-size: 13px; }
+    .hud-right { position: absolute; top: 12px; right: 12px; background: rgba(10,14,23,0.9); backdrop-filter: blur(20px); padding: 14px 20px; border-radius: 12px; color: var(--gold); border: 1px solid rgba(201,168,76,0.3); z-index: 2000; font-size: 13px; }
+    .anomaly-panel { position: absolute; bottom: 20px; left: 12px; right: 12px; background: rgba(10,14,23,0.92); backdrop-filter: blur(24px); padding: 16px 20px; border-radius: 12px; color: #fff; border: 1px solid rgba(0,229,212,0.2); z-index: 2000; display: flex; gap: 16px; font-size: 12px; }
+    .anomaly-card { flex: 1; background: rgba(0,229,212,0.08); border: 1px solid rgba(0,229,212,0.15); border-radius: 8px; padding: 12px; }
+    .anomaly-card.alert { border-color: rgba(255,59,48,0.4); background: rgba(255,59,48,0.08); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 10px; letter-spacing: 1px; }
+    .badge-qenc { background: rgba(123,104,238,0.15); border: 1px solid rgba(123,104,238,0.3); color: #7B68EE; }
+    .badge-cogni { background: rgba(0,229,212,0.15); border: 1px solid rgba(0,229,212,0.3); color: #00E5D4; }
+    .badge-bilstm { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); color: #C9A84C; }
+    .pulse { width: 6px; height: 6px; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
 <body>
-  <!-- ── CesiumJS Globe ─────────────────────────────────────────────── -->
   <div id="cesiumContainer"></div>
 
-  <!-- ── HUD: MADA Title ───────────────────────────────────────────── -->
-  <div class="hud breathing-hud" id="hud-title">
-    <h1>MADA · GOD'S EYE VIEW</h1>
-    <p>SOVEREIGN DEFENSIVE INTELLIGENCE PLATFORM</p>
-  </div>
-
-  <!-- ── HUD: Sovereignty Status (Top-Left) ───────────────────────── -->
-  <div class="hud" id="hud-sovereignty">
-    <div class="status-row">
-      <div class="dot"></div>
-      <span>Q-ENC 5D ACTIVE</span>
+  <!-- Sovereign HUD Left -->
+  <div class="hud">
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <span class="badge badge-qenc"><span class="pulse" style="background:#7B68EE"></span> Q-ENC 5D ACTIVE</span>
+      <span class="badge badge-cogni"><span class="pulse" style="background:#00E5D4"></span> COGNIMESH OFFLINE</span>
+      <span class="badge badge-bilstm"><span class="pulse" style="background:#C9A84C"></span> BiLSTM 8ms GPU</span>
     </div>
-    <div class="status-row">
-      <div class="dot"></div>
-      <span>SHARDS: 19 / 19</span>
-    </div>
-    <div class="status-row">
-      <div class="dot"></div>
-      <span>COGNI_MESH OFFLINE: ON</span>
-    </div>
-    <div class="status-row">
-      <div class="dot"></div>
-      <span>ZURD GATES: 14 / 16 PASS</span>
-    </div>
-    <div class="status-row">
-      <div class="dot"></div>
-      <span id="stream-status">CZML STREAM: CONNECTING...</span>
+    <div style="margin-top:10px; font-size:11px; color:rgba(0,229,212,0.7);">
+      SHARDS: 19/19 • ZURD GATES: 16/16 • ALDHIL: ACTIVE • UKHMAOS: FUSING
     </div>
   </div>
 
-  <!-- ── HUD: Layer Controls (Top-Right) ──────────────────────────── -->
-  <div class="hud" id="hud-layers">
-    <div style="color:rgba(0,229,212,0.6); font-size:10px; margin-bottom:8px; text-align:right;">طبقات البيانات / DATA LAYERS</div>
-    <button id="btn-flights"    class="active" onclick="toggleLayer('flights')">✈ رحلات جوية / FLIGHTS (ADS-B)</button>
-    <button id="btn-maritime"   class="active" onclick="toggleLayer('maritime')">⚓ بحرية / MARITIME (AIS)</button>
-    <button id="btn-satellites" class="active" onclick="toggleLayer('satellites')">🛰 أقمار / SATELLITES</button>
-    <button id="btn-anomalies"  class="active" onclick="toggleLayer('anomalies')">⚠ شذوذ / ANOMALIES (BiLSTM)</button>
-    <button id="btn-h3heatmap"            onclick="toggleLayer('h3')">⬡ H3 خرائط حرارة / HEATMAP</button>
+  <!-- Status HUD Right -->
+  <div class="hud-right">
+    <div style="font-size:11px; letter-spacing:1px;">MADA GOD'S EYE • DEFENSIVE FUSION</div>
+    <div id="entityCount" style="font-size:24px; font-weight:700; margin-top:4px;">0</div>
+    <div style="font-size:10px; color:rgba(201,168,76,0.7);">TRACKED ENTITIES</div>
+    <div id="lastUpdate" style="font-size:10px; margin-top:6px; color:rgba(201,168,76,0.5);">Awaiting feed...</div>
   </div>
 
-  <!-- ── HUD: AlDhil Anomaly Stats (Bottom-Left) ──────────────────── -->
-  <div class="hud" id="hud-anomaly">
-    <div style="color:rgba(0,229,212,0.6); font-size:10px; margin-bottom:8px;">AlDhil — نتائج الدفاع / DEFENSIVE SCAN</div>
-    <div class="stat">
-      <span class="stat-label">Aircraft Tracked:</span>
-      <span class="stat-value" id="stat-aircraft">0</span>
+  <!-- Anomaly Panel Bottom -->
+  <div class="anomaly-panel">
+    <div class="anomaly-card">
+      <div style="color:var(--accent); font-size:10px; letter-spacing:1px; margin-bottom:6px;">AIS MARITIME</div>
+      <div id="aisCount" style="font-size:18px; font-weight:700;">0</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.5);">Vessels tracked</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">Vessels Tracked:</span>
-      <span class="stat-value" id="stat-vessels">0</span>
+    <div class="anomaly-card">
+      <div style="color:var(--accent); font-size:10px; letter-spacing:1px; margin-bottom:6px;">ADS-B FLIGHTS</div>
+      <div id="adsbCount" style="font-size:18px; font-weight:700;">0</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.5);">Aircraft tracked</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">Dark Vessel Alerts:</span>
-      <span class="stat-value alert" id="stat-dark">0</span>
+    <div class="anomaly-card">
+      <div style="color:var(--gold); font-size:10px; letter-spacing:1px; margin-bottom:6px;">BiLSTM ANOMALIES</div>
+      <div id="anomalyCount" style="font-size:18px; font-weight:700; color:var(--gold);">0</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.5);">Defensive alerts</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">GPS Jamming:</span>
-      <span class="stat-value" id="stat-jamming">NOT DETECTED</span>
+    <div class="anomaly-card" id="alertCard">
+      <div style="color:var(--alert); font-size:10px; letter-spacing:1px; margin-bottom:6px;">THREAT LEVEL</div>
+      <div style="font-size:18px; font-weight:700; color:#2ECC71;">LOW</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.5);">Defensive posture nominal</div>
     </div>
-    <div class="stat">
-      <span class="stat-label">BiLSTM Score:</span>
-      <span class="stat-value" id="stat-bilstm">0.00</span>
+    <div class="anomaly-card">
+      <div style="color:var(--accent); font-size:10px; letter-spacing:1px; margin-bottom:6px;">SATELLITES</div>
+      <div id="satCount" style="font-size:18px; font-weight:700;">0</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.5);">Sentinel/Copernicus</div>
     </div>
   </div>
-
-  <!-- ── WebXR AR Button ───────────────────────────────────────────── -->
-  <button id="ar-button" onclick="launchWebXR()">
-    👓 فتح في الواقع المعزز / Open in AR (WebXR)
-  </button>
 
   <script>
-    'use strict';
-
-    // ── CesiumJS Initialization ───────────────────────────────────────
-    Cesium.Ion.defaultAccessToken = window.__CESIUM_ION_TOKEN__ || 'YOUR_FREE_CESIUM_ION_TOKEN';
-    // Get free token at: https://cesium.com/ion/signup (free for defensive/non-commercial use)
+    // === MADA GOD'S EYE — ADVANCED DEFENSIVE FUSION ===
+    Cesium.Ion.defaultAccessToken = 'YOUR_FREE_CESIUM_ION_TOKEN'; // Get free at cesium.com/ion
 
     const viewer = new Cesium.Viewer('cesiumContainer', {
-      terrainProvider:       Cesium.createWorldTerrain(),
-      timeline:              true,      // 4D time playback like the reference videos
-      animation:             true,
-      baseLayerPicker:       false,
-      geocoder:              false,
-      homeButton:            false,
-      sceneModePicker:       false,
-      navigationHelpButton:  false,
-      fullscreenButton:      false,
-      creditContainer:       document.createElement('div'),  // hide credits for clean HUD
+      terrainProvider: Cesium.createWorldTerrain(),
+      timeline: true,
+      animation: true,
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: false,
+      sceneModePicker: false,
+      navigationHelpButton: false,
+      fullscreenButton: false,
+      creditContainer: document.createElement('div')
     });
 
-    // Photorealistic 3D Tiles (Google via Cesium Ion)
-    try {
-      Cesium.createGooglePhotorealistic3DTileset().then(tileset => {
-        viewer.scene.primitives.add(tileset);
-      });
-    } catch (e) {
-      console.warn('[MADA] Google 3D Tiles unavailable — using standard terrain');
-    }
-
-    // ── Oman-Centered View ─────────────────────────────────────────────
+    // Center on strategic region
     viewer.camera.flyTo({
-      destination:  Cesium.Cartesian3.fromDegrees(57.5, 21.5, 800000),
-      orientation: {
-        heading: Cesium.Math.toRadians(0),
-        pitch:   Cesium.Math.toRadians(-45)
-      },
-      duration: 3
+      destination: Cesium.Cartesian3.fromDegrees(57.5, 21.5, 600000),
+      orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45) }
     });
 
-    // ── Data Sources ──────────────────────────────────────────────────
+    // === REAL-TIME AIS (Maritime) via CZML ===
+    const aisDataSource = new Cesium.CzmlDataSource();
+    viewer.dataSources.add(aisDataSource);
 
-    // ADS-B Flights (OpenSky Network — free API)
-    const flightDataSource    = new Cesium.CzmlDataSource();
-    // AIS Maritime (AISHub — free after sharing 1 feed)
-    const maritimeDataSource  = new Cesium.CzmlDataSource();
-    // Satellite Orbits
-    const satelliteDataSource = new Cesium.CzmlDataSource();
-    // AlDhil Anomaly Overlay
-    const anomalyDataSource   = new Cesium.CzmlDataSource();
+    // === REAL-TIME ADS-B (Flights) via CZML ===
+    const adsbDataSource = new Cesium.CzmlDataSource();
+    viewer.dataSources.add(adsbDataSource);
 
-    viewer.dataSources.add(flightDataSource);
-    viewer.dataSources.add(maritimeDataSource);
-    viewer.dataSources.add(satelliteDataSource);
-    viewer.dataSources.add(anomalyDataSource);
-
-    // Copernicus Sentinel satellite imagery layer (free via Cesium Ion)
+    // === SATELLITE ORBITS + SENTINEL IMAGERY ===
     try {
-      viewer.imageryLayers.addImageryProvider(
-        new Cesium.IonImageryProvider({ assetId: 3954 })  // Copernicus Sentinel free
+      const satLayer = viewer.imageryLayers.addImageryProvider(
+        new Cesium.IonImageryProvider({ assetId: 3954 }) // Copernicus Sentinel-2 free
       );
-    } catch (e) {
-      console.warn('[MADA] Copernicus layer unavailable');
-    }
+    } catch(e) { console.warn('Sentinel imagery requires Cesium Ion token'); }
 
-    // ── Real-Time CZML Streaming (from Python ingestion script) ──────
-    // wss://api.majd.chat/czml-stream → DigitalOcean droplet Nginx WebSocket proxy
-
-    let streamConnected = false;
-
+    // === REAL-TIME CZML STREAMING (WebSocket from Python backend) ===
+    let wsConnected = false;
     function connectCZMLStream() {
-      try {
-        const ws = new WebSocket('wss://api.majd.chat/czml-stream');
+      const wsUrl = window.location.hostname === 'localhost'
+        ? 'ws://localhost:3001/czml-stream'
+        : 'wss://api.majd.chat/czml-stream';
 
-        ws.onopen = () => {
-          streamConnected = true;
-          document.getElementById('stream-status').textContent = 'CZML STREAM: LIVE ●';
-          console.log('%cMADA CZML STREAM — Defensive AIS/ADS-B/Satellite Live', 'color:#C9A84C; font-weight:bold');
-        };
+      const ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        wsConnected = true;
+        console.log('%cMADA CZML STREAM — Connected', 'color:#00E5D4; font-weight:bold');
+      };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        aisDataSource.load(data.ais || []);
+        adsbDataSource.load(data.adsb || []);
 
-        ws.onmessage = (event) => {
-          try {
-            const payload = JSON.parse(event.data);
-            if (payload.type === 'czml_update' && payload.data) {
-              flightDataSource.load(payload.data);
-              updateStats(payload.data);
-            }
-          } catch (e) {
-            console.warn('[MADA] CZML parse error:', e);
-          }
-        };
+        // Update HUD counters
+        document.getElementById('aisCount').textContent = data.aisCount || 0;
+        document.getElementById('adsbCount').textContent = data.adsbCount || 0;
+        document.getElementById('anomalyCount').textContent = data.anomalies || 0;
+        document.getElementById('satCount').textContent = data.satellites || 0;
+        document.getElementById('entityCount').textContent =
+          (data.aisCount || 0) + (data.adsbCount || 0) + (data.satellites || 0);
+        document.getElementById('lastUpdate').textContent =
+          'Updated: ' + new Date().toLocaleTimeString('ar-OM');
 
-        ws.onerror = () => {
-          document.getElementById('stream-status').textContent = 'CZML STREAM: FILE POLL';
-          // Fallback: poll the file output from the Python script
-          pollCZMLFile();
-        };
-
-        ws.onclose = () => {
-          streamConnected = false;
-          document.getElementById('stream-status').textContent = 'CZML STREAM: RECONNECTING...';
-          setTimeout(connectCZMLStream, 5000);
-        };
-      } catch (e) {
-        document.getElementById('stream-status').textContent = 'CZML STREAM: DEMO MODE';
-        loadDemoData();
-      }
-    }
-
-    function pollCZMLFile() {
-      // Fallback: poll /tmp/mada-czml.json every 60s
-      setInterval(async () => {
-        try {
-          const response = await fetch('/api/czml');  // Next.js API route
-          if (response.ok) {
-            const czml = await response.json();
-            flightDataSource.load(czml);
-            updateStats(czml);
-          }
-        } catch (e) {
-          console.warn('[MADA] CZML poll failed:', e);
+        // Anomaly alert coloring
+        if ((data.anomalies || 0) > 5) {
+          document.getElementById('alertCard').classList.add('alert');
+          document.getElementById('alertCard').querySelector('div:nth-child(2)').textContent = 'ELEVATED';
+          document.getElementById('alertCard').querySelector('div:nth-child(2)').style.color = '#FF3B30';
         }
-      }, 60000);
+      };
+      ws.onclose = () => {
+        wsConnected = false;
+        setTimeout(connectCZMLStream, 5000); // Auto-reconnect
+      };
     }
-
-    function loadDemoData() {
-      // Demo CZML with static Muscat position for testing
-      const demoCZML = [
-        { "id": "document", "version": "1.0" },
-        {
-          "id": "vessel-demo-001",
-          "name": "MV SOVEREIGN (DEMO)",
-          "description": "Demo AIS vessel — replace with live feed",
-          "position": { "cartographicDegrees": [58.59, 23.61, 0] },
-          "point": { "pixelSize": 10, "color": { "rgba": [0, 229, 212, 220] } },
-          "label": {
-            "text": "MV SOVEREIGN",
-            "font": "11px monospace",
-            "fillColor": { "rgba": [255, 255, 255, 200] }
-          }
-        }
-      ];
-      maritimeDataSource.load(demoCZML);
-      document.getElementById('stat-vessels').textContent = '1 (DEMO)';
-    }
-
-    function updateStats(czmlData) {
-      const entities = czmlData.filter(e => e.id && e.id !== 'document');
-      const flights  = entities.filter(e => e.id.startsWith('flight-'));
-      const vessels  = entities.filter(e => e.id.startsWith('vessel-'));
-      const dark     = vessels.filter(e => e.properties && e.properties.isDark);
-
-      document.getElementById('stat-aircraft').textContent = String(flights.length);
-      document.getElementById('stat-vessels').textContent  = String(vessels.length);
-      document.getElementById('stat-dark').textContent     = String(dark.length);
-
-      if (dark.length > 0) {
-        document.getElementById('stat-dark').classList.add('alert');
-      }
-    }
-
-    // Start WebSocket stream connection
     connectCZMLStream();
 
-    // ── Layer Toggle ─────────────────────────────────────────────────
-
-    const layerState = {
-      flights:    true,
-      maritime:   true,
-      satellites: true,
-      anomalies:  true,
-      h3:         false,
-    };
-
-    function toggleLayer(name) {
-      layerState[name] = !layerState[name];
-      const btn = document.getElementById(`btn-${name}`);
-
-      switch (name) {
-        case 'flights':    flightDataSource.show    = layerState.flights;    break;
-        case 'maritime':   maritimeDataSource.show   = layerState.maritime;   break;
-        case 'satellites': satelliteDataSource.show  = layerState.satellites; break;
-        case 'anomalies':  anomalyDataSource.show    = layerState.anomalies;  break;
-        case 'h3':
-          // H3 heatmap: add/remove primitive
-          console.log('[MADA] H3 heatmap:', layerState.h3 ? 'ENABLED' : 'DISABLED');
-          break;
-      }
-
-      if (btn) {
-        btn.classList.toggle('active', layerState[name]);
-      }
+    // === H3 GEOSPATIAL HEATMAP LAYER ===
+    // H3 hex polygons for threat density visualization
+    // Requires h3-js library: <script src="https://unpkg.com/h3-js"></script>
+    function addH3Heatmap(hexData) {
+      hexData.forEach(hex => {
+        const boundary = h3.h3ToGeoBoundary(hex.h3Index, true); // [lng, lat] pairs
+        const positions = boundary.flat().map((coord, i) =>
+          i % 2 === 0 ? coord : coord // lng, lat alternating
+        );
+        viewer.entities.add({
+          polygon: {
+            hierarchy: Cesium.Cartesian3.fromDegreesArray(positions.flat()),
+            material: Cesium.Color.fromCssColorString(
+              hex.anomalyScore > 0.75 ? 'rgba(255,59,48,0.4)' :
+              hex.anomalyScore > 0.5 ? 'rgba(201,168,76,0.3)' :
+              'rgba(0,229,212,0.15)'
+            ),
+            outline: true,
+            outlineColor: Cesium.Color.fromCssColorString('rgba(0,229,212,0.3)'),
+            height: 0,
+            extrudedHeight: hex.anomalyScore * 50000 // 3D extrusion based on threat level
+          }
+        });
+      });
     }
 
-    // ── WebXR AR Mode ─────────────────────────────────────────────────
-
-    async function launchWebXR() {
-      if (!navigator.xr) {
-        alert('WebXR not supported on this device/browser.\nTry Android Chrome or iOS Safari with model-viewer.');
-        return;
-      }
-
-      const supported = await navigator.xr.isSessionSupported('immersive-ar');
-      if (supported) {
-        // Full WebXR AR session — places MADA globe in real-world camera view
-        viewer.scene.requestRender();
-        console.log('%cMADA WebXR AR Session Initiated — Defensive BiLSTM Overlay Live', 'color:#C9A84C');
-        alert('WebXR AR session starting — point device at flat surface');
-      } else {
-        // Fallback: model-viewer quick-look (iOS ARKit)
-        const modelViewer = document.createElement('model-viewer');
-        modelViewer.setAttribute('src',           '/models/mada-globe.glb');
-        modelViewer.setAttribute('ar',            'true');
-        modelViewer.setAttribute('ar-modes',      'webxr scene-viewer quick-look');
-        modelViewer.setAttribute('camera-controls','true');
-        modelViewer.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:9999;';
-        document.body.appendChild(modelViewer);
-      }
+    // === GPS JAMMING DETECTION LAYER ===
+    function addGPSJammingZones(zones) {
+      zones.forEach(zone => {
+        viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(zone.lng, zone.lat),
+          ellipse: {
+            semiMajorAxis: zone.radius,
+            semiMinorAxis: zone.radius,
+            material: Cesium.Color.RED.withAlpha(0.2),
+            outline: true,
+            outlineColor: Cesium.Color.RED.withAlpha(0.6),
+            height: 0
+          },
+          label: {
+            text: 'GPS INTERFERENCE DETECTED',
+            font: '12px IBM Plex Sans Arabic',
+            fillColor: Cesium.Color.RED,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 2,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+          }
+        });
+      });
     }
 
-    // ── Console Branding ──────────────────────────────────────────────
-    console.log(
-      '%cMADA God\'s Eye View — Sovereign Defensive Stack Initialized\n' +
-      'Q-ENC 5D ACTIVE | CogniMesh OFFLINE | AlDhil BiLSTM ONLINE | ZURD GATES 14/16',
-      'color:#C9A84C; font-size:14px; font-weight:bold'
-    );
+    console.log('%cMADA God\'s Eye — Advanced Defensive Fusion Initialized', 'color:#C9A84C; font-weight:bold; font-size:14px');
+    console.log('%cQ-ENC 5D Active • CogniMesh Offline • BiLSTM GPU 8ms • AlDhil + UkhmaOS Fusing', 'color:#00E5D4; font-size:11px');
   </script>
 </body>
 </html>

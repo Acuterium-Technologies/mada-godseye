@@ -1,0 +1,26 @@
+{
+  "maritime": {
+    "ais_hub": { "url": "https://www.aishub.net/api/v1/ais", "cost": "free", "note": "Share 1 feed for access" },
+    "marine_cadastre": { "url": "https://marinecadastre.gov/ais/", "cost": "free", "format": "GeoParquet" },
+    "global_fishing_watch": { "url": "https://gateway.api.globalfishingwatch.org/v3/vessels", "cost": "free" }
+  },
+  "flight": {
+    "opensky": { "url": "https://opensky-network.org/api/states/all", "cost": "free", "rate": "60rpm" },
+    "adsb_exchange": { "url": "https://www.adsbexchange.com/data/", "cost": "free", "note": "Military inclusive" }
+  },
+  "satellite": {
+    "copernicus": { "url": "https://sh.dataspace.copernicus.eu/api/v1/catalog", "cost": "free", "data": "Sentinel-1/2/3" },
+    "usgs": { "url": "https://earthexplorer.usgs.gov/", "cost": "free", "data": "Landsat" },
+    "nasa_worldview": { "url": "https://worldview.earthdata.nasa.gov/", "cost": "free" }
+  },
+  "sigint": {
+    "rtl_sdr": { "tool": "RTL-SDR + CubicSDR", "cost": "free", "sovereignty": "full_offline" },
+    "rayhunter": { "tool": "Rayhunter (EFF)", "cost": "free", "sovereignty": "full_offline" }
+  },
+  "osint": {
+    "spiderfoot": { "url": "localhost:5001", "cost": "free", "modules": "200+" },
+    "maltego_ce": { "tool": "Maltego Community Edition", "cost": "free" },
+    "sherlock": { "tool": "Sherlock", "cost": "free", "sites": "400+" },
+    "social_searcher": { "url": "https://www.social-searcher.com/", "cost": "free" }
+  }
+}

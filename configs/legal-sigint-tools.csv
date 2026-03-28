@@ -1,0 +1,8 @@
+Tool,Purpose (Defensive),Cost,Sovereignty Level,Integration with Your Stack
+RTL-SDR + CubicSDR,Passive RF / pager / IoT listening,Free,Full offline,Feeds Edna-Sig → MADA via CogniMesh
+Rayhunter (EFF),Passive cellular metadata,Free,Full offline,Arabic dialect pattern detection
+SpiderFoot HX,"Automated OSINT (KYC/AML, spoofing)",Free,Local install,UkhmaOS graph fusion
+Maltego CE,Link analysis & entity graphing,Free,Local,AlDhil threat attribution
+Sherlock,Username / social footprint,Free,Local,Qareen OSINT for trafficking patterns
+OpenSky + AISHub,Flight / vessel real-time,Free,API + CZML,Direct streaming to MADA God’s Eye
+Copernicus / USGS,Satellite imagery & radar,Free,Public,UkhmaOS knowledge graph
